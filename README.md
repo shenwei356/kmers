@@ -39,6 +39,15 @@ CPU: AMD Ryzen 7 2700X Eight-Core Processor, 3.7 GHz
                         BenchmarkRevCompK32-16    3.814 ns/op     0 B/op   0 allocs/op
                        BenchmarkCannonalK32-16    4.147 ns/op     0 B/op   0 allocs/op
 
+## Support
+
+Please [open an issue](https://github.com/shenwei356/kmers/issues) to report bugs,
+propose new functions or ask for help.
+
+## License
+
+[MIT License](https://github.com/shenwei356/kmers/blob/master/LICENSE)
+
 ## History
 
 This package was originally maintained in [unikmer](https://github.com/shenwei356/unikmer).

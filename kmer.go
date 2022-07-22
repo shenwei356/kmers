@@ -73,25 +73,24 @@ func init() {
 //
 // Codes:
 //
-// 	  A    0b00
-// 	  C    0b01
-// 	  G    0b10
-// 	  T    0b11
+//	A    0b00
+//	C    0b01
+//	G    0b10
+//	T    0b11
 //
 // For degenerate bases, only the first base is kept.
 //
-//     M       AC     A
-//     V       ACG    A
-//     H       ACT    A
-//     R       AG     A
-//     D       AGT    A
-//     W       AT     A
-//     S       CG     C
-//     B       CGT    C
-//     Y       CT     C
-//     K       GT     G
-//     N       ACGT   A
-//
+//	M       AC     A
+//	V       ACG    A
+//	H       ACT    A
+//	R       AG     A
+//	D       AGT    A
+//	W       AT     A
+//	S       CG     C
+//	B       CGT    C
+//	Y       CT     C
+//	K       GT     G
+//	N       ACGT   A
 func Encode(kmer []byte) (code uint64, err error) {
 	if len(kmer) == 0 || len(kmer) > 32 {
 		return 0, ErrKOverflow
@@ -308,6 +307,11 @@ func MustCanonical(code uint64, k int) uint64 {
 	return code
 }
 
+// just use: (1413956417 >> (x << 3)) & 255
+//
+// chr T        G        C        A
+// 0b 01010100 01000111 01000011 01000001  1413956417
+
 // bit2base is for mapping bit to base.
 var bit2base = [4]byte{'A', 'C', 'G', 'T'}
 
@@ -325,6 +329,9 @@ func Decode(code uint64, k int) []byte {
 	kmer := make([]byte, k)
 	for i := 0; i < k; i++ {
 		kmer[k-1-i] = bit2base[code&3]
+
+		// it's slower than bit2base[code&3], according to the test.
+		// kmer[k-1-i] = byte(uint64(1413956417>>((code&3)<<3)) & 255)
 		code >>= 2
 	}
 	return kmer
@@ -335,6 +342,9 @@ func MustDecode(code uint64, k int) []byte {
 	kmer := make([]byte, k)
 	for i := 0; i < k; i++ {
 		kmer[k-1-i] = bit2base[code&3]
+
+		// it's slower than bit2base[code&3], according to the test.
+		// kmer[k-1-i] = byte(uint64(1413956417>>((code&3)<<3)) & 255)
 		code >>= 2
 	}
 	return kmer
