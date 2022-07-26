@@ -65,7 +65,7 @@ var MaxCode []uint64
 func init() {
 	MaxCode = make([]uint64, 33)
 	for i := 1; i <= 32; i++ {
-		MaxCode[i] = 1<<uint(i*2) - 1
+		MaxCode[i] = (1 << uint(1<<i)) - 1 // (1<<(i*2)) - 1
 	}
 }
 
@@ -120,8 +120,8 @@ func MustEncodeFromFormerKmer(kmer []byte, leftKmer []byte, leftCode uint64) (ui
 	if v == 4 {
 		return leftCode, ErrIllegalBase
 	}
-	// retrieve (k-1)*2 bits and << 2, and then add v
-	return leftCode&((1<<(uint(len(kmer)-1)<<1))-1)<<2 | v, nil
+	// retrieve lower (k-1)*2 bits and << 2, and then add v
+	return (leftCode&((1<<(uint(len(kmer)-1)<<1))-1))<<2 | v, nil
 }
 
 // EncodeFromFormerKmer encodes from the former k-mer, inspired by ntHash
@@ -177,12 +177,12 @@ func Reverse(code uint64, k int) (c uint64) {
 
 	// https: //www.biostars.org/p/113640, with a little modification
 	c = code
-	c = ((c >> 2 & 0x3333333333333333) | (c&0x3333333333333333)<<2)
-	c = ((c >> 4 & 0x0F0F0F0F0F0F0F0F) | (c&0x0F0F0F0F0F0F0F0F)<<4)
-	c = ((c >> 8 & 0x00FF00FF00FF00FF) | (c&0x00FF00FF00FF00FF)<<8)
-	c = ((c >> 16 & 0x0000FFFF0000FFFF) | (c&0x0000FFFF0000FFFF)<<16)
-	c = ((c >> 32 & 0x00000000FFFFFFFF) | (c&0x00000000FFFFFFFF)<<32)
-	return (c >> (2 * (32 - k)))
+	c = (c >> 2 & 0x3333333333333333) | (c&0x3333333333333333)<<2
+	c = (c >> 4 & 0x0F0F0F0F0F0F0F0F) | (c&0x0F0F0F0F0F0F0F0F)<<4
+	c = (c >> 8 & 0x00FF00FF00FF00FF) | (c&0x00FF00FF00FF00FF)<<8
+	c = (c >> 16 & 0x0000FFFF0000FFFF) | (c&0x0000FFFF0000FFFF)<<16
+	c = (c >> 32 & 0x00000000FFFFFFFF) | (c&0x00000000FFFFFFFF)<<32
+	return c >> ((32 - k) << 1)
 }
 
 // MustReverse is similar to Reverse, but does not check k.
@@ -195,12 +195,12 @@ func MustReverse(code uint64, k int) (c uint64) {
 
 	// https: //www.biostars.org/p/113640, with a little modification
 	c = code
-	c = ((c >> 2 & 0x3333333333333333) | (c&0x3333333333333333)<<2)
-	c = ((c >> 4 & 0x0F0F0F0F0F0F0F0F) | (c&0x0F0F0F0F0F0F0F0F)<<4)
-	c = ((c >> 8 & 0x00FF00FF00FF00FF) | (c&0x00FF00FF00FF00FF)<<8)
-	c = ((c >> 16 & 0x0000FFFF0000FFFF) | (c&0x0000FFFF0000FFFF)<<16)
-	c = ((c >> 32 & 0x00000000FFFFFFFF) | (c&0x00000000FFFFFFFF)<<32)
-	return (c >> (2 * (32 - k)))
+	c = (c >> 2 & 0x3333333333333333) | (c&0x3333333333333333)<<2
+	c = (c >> 4 & 0x0F0F0F0F0F0F0F0F) | (c&0x0F0F0F0F0F0F0F0F)<<4
+	c = (c >> 8 & 0x00FF00FF00FF00FF) | (c&0x00FF00FF00FF00FF)<<8
+	c = (c >> 16 & 0x0000FFFF0000FFFF) | (c&0x0000FFFF0000FFFF)<<16
+	c = (c >> 32 & 0x00000000FFFFFFFF) | (c&0x00000000FFFFFFFF)<<32
+	return c >> ((32 - k) << 1)
 }
 
 // Complement returns code of complement sequence.
@@ -208,12 +208,12 @@ func Complement(code uint64, k int) uint64 {
 	if k <= 0 || k > 32 {
 		panic(ErrKOverflow)
 	}
-	return code ^ (1<<uint(k<<1) - 1)
+	return code ^ ((1 << uint(k<<1)) - 1)
 }
 
 // MustComplement is similar to Complement, but does not check k.
 func MustComplement(code uint64, k int) uint64 {
-	return code ^ (1<<uint(k<<1) - 1)
+	return code ^ ((1 << uint(k<<1)) - 1)
 }
 
 // RevComp returns code of reverse complement sequence.
@@ -229,12 +229,12 @@ func RevComp(code uint64, k int) (c uint64) {
 
 	// https://www.biostars.org/p/113640/#9474334
 	c = ^code
-	c = ((c >> 2 & 0x3333333333333333) | (c&0x3333333333333333)<<2)
-	c = ((c >> 4 & 0x0F0F0F0F0F0F0F0F) | (c&0x0F0F0F0F0F0F0F0F)<<4)
-	c = ((c >> 8 & 0x00FF00FF00FF00FF) | (c&0x00FF00FF00FF00FF)<<8)
-	c = ((c >> 16 & 0x0000FFFF0000FFFF) | (c&0x0000FFFF0000FFFF)<<16)
-	c = ((c >> 32 & 0x00000000FFFFFFFF) | (c&0x00000000FFFFFFFF)<<32)
-	return (c >> (2 * (32 - k)))
+	c = (c >> 2 & 0x3333333333333333) | (c&0x3333333333333333)<<2
+	c = (c >> 4 & 0x0F0F0F0F0F0F0F0F) | (c&0x0F0F0F0F0F0F0F0F)<<4
+	c = (c >> 8 & 0x00FF00FF00FF00FF) | (c&0x00FF00FF00FF00FF)<<8
+	c = (c >> 16 & 0x0000FFFF0000FFFF) | (c&0x0000FFFF0000FFFF)<<16
+	c = (c >> 32 & 0x00000000FFFFFFFF) | (c&0x00000000FFFFFFFF)<<32
+	return c >> ((32 - k) << 1)
 }
 
 // MustRevComp is similar to RevComp, but does not check k.
@@ -247,12 +247,12 @@ func MustRevComp(code uint64, k int) (c uint64) {
 
 	// https://www.biostars.org/p/113640/#9474334
 	c = ^code
-	c = ((c >> 2 & 0x3333333333333333) | (c&0x3333333333333333)<<2)
-	c = ((c >> 4 & 0x0F0F0F0F0F0F0F0F) | (c&0x0F0F0F0F0F0F0F0F)<<4)
-	c = ((c >> 8 & 0x00FF00FF00FF00FF) | (c&0x00FF00FF00FF00FF)<<8)
-	c = ((c >> 16 & 0x0000FFFF0000FFFF) | (c&0x0000FFFF0000FFFF)<<16)
-	c = ((c >> 32 & 0x00000000FFFFFFFF) | (c&0x00000000FFFFFFFF)<<32)
-	return (c >> (2 * (32 - k)))
+	c = (c >> 2 & 0x3333333333333333) | (c&0x3333333333333333)<<2
+	c = (c >> 4 & 0x0F0F0F0F0F0F0F0F) | (c&0x0F0F0F0F0F0F0F0F)<<4
+	c = (c >> 8 & 0x00FF00FF00FF00FF) | (c&0x00FF00FF00FF00FF)<<8
+	c = (c >> 16 & 0x0000FFFF0000FFFF) | (c&0x0000FFFF0000FFFF)<<16
+	c = (c >> 32 & 0x00000000FFFFFFFF) | (c&0x00000000FFFFFFFF)<<32
+	return c >> ((32 - k) << 1)
 }
 
 // Canonical returns code of its canonical kmer.
@@ -270,12 +270,12 @@ func Canonical(code uint64, k int) uint64 {
 
 	// https://www.biostars.org/p/113640/#9474334
 	c := ^code
-	c = ((c >> 2 & 0x3333333333333333) | (c&0x3333333333333333)<<2)
-	c = ((c >> 4 & 0x0F0F0F0F0F0F0F0F) | (c&0x0F0F0F0F0F0F0F0F)<<4)
-	c = ((c >> 8 & 0x00FF00FF00FF00FF) | (c&0x00FF00FF00FF00FF)<<8)
-	c = ((c >> 16 & 0x0000FFFF0000FFFF) | (c&0x0000FFFF0000FFFF)<<16)
-	c = ((c >> 32 & 0x00000000FFFFFFFF) | (c&0x00000000FFFFFFFF)<<32)
-	rc = (c >> (2 * (32 - k)))
+	c = (c >> 2 & 0x3333333333333333) | (c&0x3333333333333333)<<2
+	c = (c >> 4 & 0x0F0F0F0F0F0F0F0F) | (c&0x0F0F0F0F0F0F0F0F)<<4
+	c = (c >> 8 & 0x00FF00FF00FF00FF) | (c&0x00FF00FF00FF00FF)<<8
+	c = (c >> 16 & 0x0000FFFF0000FFFF) | (c&0x0000FFFF0000FFFF)<<16
+	c = (c >> 32 & 0x00000000FFFFFFFF) | (c&0x00000000FFFFFFFF)<<32
+	rc = c >> ((32 - k) << 1)
 
 	if rc < code {
 		return rc
@@ -294,12 +294,12 @@ func MustCanonical(code uint64, k int) uint64 {
 
 	// https://www.biostars.org/p/113640/#9474334
 	c := ^code
-	c = ((c >> 2 & 0x3333333333333333) | (c&0x3333333333333333)<<2)
-	c = ((c >> 4 & 0x0F0F0F0F0F0F0F0F) | (c&0x0F0F0F0F0F0F0F0F)<<4)
-	c = ((c >> 8 & 0x00FF00FF00FF00FF) | (c&0x00FF00FF00FF00FF)<<8)
-	c = ((c >> 16 & 0x0000FFFF0000FFFF) | (c&0x0000FFFF0000FFFF)<<16)
-	c = ((c >> 32 & 0x00000000FFFFFFFF) | (c&0x00000000FFFFFFFF)<<32)
-	rc = (c >> (2 * (32 - k)))
+	c = (c >> 2 & 0x3333333333333333) | (c&0x3333333333333333)<<2
+	c = (c >> 4 & 0x0F0F0F0F0F0F0F0F) | (c&0x0F0F0F0F0F0F0F0F)<<4
+	c = (c >> 8 & 0x00FF00FF00FF00FF) | (c&0x00FF00FF00FF00FF)<<8
+	c = (c >> 16 & 0x0000FFFF0000FFFF) | (c&0x0000FFFF0000FFFF)<<16
+	c = (c >> 32 & 0x00000000FFFFFFFF) | (c&0x00000000FFFFFFFF)<<32
+	rc = c >> ((32 - k) << 1)
 
 	if rc < code {
 		return rc
@@ -332,6 +332,7 @@ func Decode(code uint64, k int) []byte {
 
 		// it's slower than bit2base[code&3], according to the test.
 		// kmer[k-1-i] = byte(uint64(1413956417>>((code&3)<<3)) & 255)
+
 		code >>= 2
 	}
 	return kmer
@@ -345,6 +346,7 @@ func MustDecode(code uint64, k int) []byte {
 
 		// it's slower than bit2base[code&3], according to the test.
 		// kmer[k-1-i] = byte(uint64(1413956417>>((code&3)<<3)) & 255)
+
 		code >>= 2
 	}
 	return kmer
