@@ -5,6 +5,8 @@
 
 This package provides manipulations for bit-packed k-mers (k<=32, encoded in `uint64`).
 
+Methods with names starting with `Must` are faster by skipping boundary checking.
+
 Related projects:
 
 - [unik](https://github.com/shenwei356/unik) provides k-mer serialization methods for this package.

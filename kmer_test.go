@@ -151,12 +151,6 @@ func TestEncodeFromLatterKmer(t *testing.T) {
 // TestRevComp tests revcomp
 func TestRevComp(t *testing.T) {
 	var kcode KmerCode
-	for _, mer := range randomMers {
-		kcode, _ = NewKmerCode(mer)
-
-		// fmt.Printf("%s, rev:%s\n", kcode, kcode.Rev())
-
-	}
 
 	for _, mer := range randomMers {
 		kcode, _ = NewKmerCode(mer)
@@ -172,6 +166,72 @@ func TestRevComp(t *testing.T) {
 		if !kcode.Comp().Rev().Equal(kcode.RevComp()) {
 			t.Errorf("Rev().Comp() error: %s, Rev(): %s, Comp(): %s, RevComp: %s", kcode, kcode.Rev(), kcode.Comp(), kcode.RevComp())
 		}
+	}
+}
+
+func parseKmer(s string) ([]byte, uint64, int) {
+	kmer := []byte(s)
+	code, _ := Encode(kmer)
+	k := int(len(kmer))
+	return kmer, code, k
+}
+
+func TestSubstringOps(t *testing.T) {
+	kmer, code, k := parseKmer("ACTGACCTGC")
+
+	prefix1, p1, k1 := parseKmer("ACTGCA")
+	prefix2, p2, k2 := parseKmer("ACTGC")
+
+	// BaseAt
+	var c uint8
+	for i, b := range kmer {
+		c = BaseAt(code, k, i)
+		if bit2base[c] != b {
+			t.Errorf("BaseAt error: %d, expected %c, returned %c", i, b, c)
+		}
+	}
+
+	// Prefix
+	var p []byte
+	for i := 1; i <= len(kmer); i++ {
+		p = MustDecode(Prefix(code, k, i), i)
+		if !bytes.Equal(p, kmer[:i]) {
+			t.Errorf("Prefix error: %d, expected %s, returned %s", i, kmer[:i], p)
+		}
+	}
+
+	// Suffix
+	var s []byte
+	for i := 0; i < len(kmer); i++ {
+		s = MustDecode(Suffix(code, k, i), len(kmer)-i)
+		if !bytes.Equal(s, kmer[i:]) {
+			t.Errorf("Suffix error: %d, expected %s, returned %s", i, kmer[i:], s)
+		}
+	}
+
+	// LongestPrefix
+	n := LongestPrefix(p1, p2, k1, k2)
+	if n != 5 {
+		t.Errorf("LongestPrefix error: expected %d, returned %d", 5, n)
+	}
+
+	// HasPrefix
+	b := HasPrefix(code, p1, k, k1)
+	has := bytes.HasPrefix(kmer, prefix1)
+	if b != has {
+		t.Errorf("HasPrefix error: expected %v, returned %v", has, b)
+	}
+
+	b = HasPrefix(code, p2, k, k2)
+	has = bytes.HasPrefix(kmer, prefix2)
+	if b != has {
+		t.Errorf("KmerHasPrefix error: expected %v, returned %v", has, b)
+	}
+
+	b = HasPrefix(p1, p2, k2, k2)
+	has = bytes.HasPrefix(kmer, prefix2)
+	if b != has {
+		t.Errorf("KmerHasPrefix error: expected %v, returned %v", has, b)
 	}
 }
 

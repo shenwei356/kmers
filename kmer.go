@@ -23,6 +23,7 @@ package kmers
 import (
 	"bytes"
 	"errors"
+	"math/bits"
 )
 
 // ErrIllegalBase means that base beyond IUPAC symbols are  detected.
@@ -30,6 +31,12 @@ var ErrIllegalBase = errors.New("kmers: illegal base")
 
 // ErrKOverflow means K > 32.
 var ErrKOverflow = errors.New("kmers: k-mer size (1-32) overflow")
+
+// ErrPositionOverflow means i >= K
+var ErrPositionOverflow = errors.New("kmers: base position (0-based) overflow")
+
+// ErrLengthOverflow means the length n > K
+var ErrLengthOverflow = errors.New("kmers: base position (0-based) overflow")
 
 // ErrCodeOverflow means the encode interger is bigger than 4^k.
 var ErrCodeOverflow = errors.New("kmers: code value overflow")
@@ -352,84 +359,99 @@ func MustDecode(code uint64, k int) []byte {
 	return kmer
 }
 
-// KmerCode is a struct representing a k-mer in 64-bits.
-type KmerCode struct {
-	Code uint64
-	K    int
-}
-
-// NewKmerCode returns a new KmerCode struct from byte slice.
-func NewKmerCode(kmer []byte) (KmerCode, error) {
-	code, err := Encode(kmer)
-	if err != nil {
-		return KmerCode{}, err
+// BaseAt returns the base in pos i (0-based).
+func BaseAt(code uint64, k int, i int) uint8 {
+	if i < 0 || i >= k {
+		panic(ErrPositionOverflow)
 	}
-	return KmerCode{code, len(kmer)}, err
+	return uint8(code >> ((k - i - 1) << 1) & 3)
 }
 
-// NewKmerCodeFromFormerOne computes KmerCode from the Former consecutive k-mer.
-func NewKmerCodeFromFormerOne(kmer []byte, leftKmer []byte, preKcode KmerCode) (KmerCode, error) {
-	code, err := EncodeFromFormerKmer(kmer, leftKmer, preKcode.Code)
-	if err != nil {
-		return KmerCode{}, err
+// MustBaseAt returns the base in pos i (0-based).
+func MustBaseAt(code uint64, k int, i int) uint8 {
+	return uint8(code >> ((k - i - 1) << 1) & 3)
+}
+
+// Prefix returns the first n bases. n needs to be > 0.
+// The length of the prefix is n.
+func Prefix(code uint64, k int, n int) uint64 {
+	if n < 1 || n > k {
+		panic(ErrLengthOverflow)
 	}
-	return KmerCode{code, len(kmer)}, err
+	return code >> ((k - n) << 1)
 }
 
-// NewKmerCodeMustFromFormerOne computes KmerCode from the Former consecutive k-mer,
-// assuming the k-mer and leftKmer are both OK.
-func NewKmerCodeMustFromFormerOne(kmer []byte, leftKmer []byte, preKcode KmerCode) (KmerCode, error) {
-	code, err := MustEncodeFromFormerKmer(kmer, leftKmer, preKcode.Code)
-	if err != nil {
-		return KmerCode{}, err
+// MustPrefix returns the first n bases. n needs to be > 0.
+// The length of the prefix is n.
+func MustPrefix(code uint64, k int, n int) uint64 {
+	return code >> ((k - n) << 1)
+}
+
+// Suffix returns the suffix starting from position i (0-based).
+// The length of the suffix is k - i.
+func Suffix(code uint64, k int, i int) uint64 {
+	if i < 0 || i >= k {
+		panic(ErrPositionOverflow)
 	}
-	return KmerCode{code, len(kmer)}, err
+	return code & (1<<((k-i)<<1) - 1)
 }
 
-// Equal checks wether two KmerCodes are the same.
-func (kcode KmerCode) Equal(kcode2 KmerCode) bool {
-	return kcode.K == kcode2.K && kcode.Code == kcode2.Code
+// MustSuffix returns the suffix starting from position i (0-based).
+// The length of the suffix is k - i.
+func MustSuffix(code uint64, k int, i int) uint64 {
+	return code & (1<<((k-i)<<1) - 1)
 }
 
-// Rev returns KmerCode of the reverse sequence.
-func (kcode KmerCode) Rev() KmerCode {
-	return KmerCode{MustReverse(kcode.Code, kcode.K), kcode.K}
-}
-
-// Comp returns KmerCode of the complement sequence.
-func (kcode KmerCode) Comp() KmerCode {
-	return KmerCode{MustComplement(kcode.Code, kcode.K), kcode.K}
-}
-
-// RevComp returns KmerCode of the reverse complement sequence.
-func (kcode KmerCode) RevComp() KmerCode {
-	return KmerCode{MustRevComp(kcode.Code, kcode.K), kcode.K}
-}
-
-// Canonical returns its canonical kmer
-func (kcode KmerCode) Canonical() KmerCode {
-	rcKcode := kcode.RevComp()
-	if rcKcode.Code < kcode.Code {
-		return rcKcode
+// LongestPrefix returns the length of the longest prefix.
+func LongestPrefix(code1, code2 uint64, k1, k2 int) int {
+	if k1 <= 0 || k1 > 32 || k2 <= 0 || k2 > 32 {
+		panic(ErrKOverflow)
 	}
-	return kcode
-}
 
-// Bytes returns k-mer in []byte.
-func (kcode KmerCode) Bytes() []byte {
-	return Decode(kcode.Code, kcode.K)
-}
-
-// String returns k-mer in string
-func (kcode KmerCode) String() string {
-	return string(Decode(kcode.Code, kcode.K))
-}
-
-// BitsString returns code to string
-func (kcode KmerCode) BitsString() string {
-	var buf bytes.Buffer
-	for _, b := range Decode(kcode.Code, kcode.K) {
-		buf.WriteString(bit2str[base2bit[b]])
+	var d int
+	if k1 > k2 { // most of the cases
+		code1 = code1 >> ((k1 - k2) << 1)
+		d = 32 - k2
+	} else if k1 == k2 {
+		d = 32 - k1
+	} else {
+		code2 = code2 >> ((k2 - k1) << 1)
+		d = 32 - k1
 	}
-	return buf.String()
+	return bits.LeadingZeros64(code1^code2)/2 - d
+}
+
+// MustLongestPrefix returns the length of the longest prefix.
+func MustLongestPrefix(code1, code2 uint64, k1, k2 int) int {
+	var d int
+	if k1 > k2 { // most of the cases
+		code1 = code1 >> ((k1 - k2) << 1)
+		d = 32 - k2
+	} else if k1 == k2 {
+		d = 32 - k1
+	} else {
+		code2 = code2 >> ((k2 - k1) << 1)
+		d = 32 - k1
+	}
+	return bits.LeadingZeros64(code1^code2)/2 - d
+}
+
+// HasPrefix check if a k-mer has a prefix
+func HasPrefix(code uint64, prefix uint64, k1, k2 int) bool {
+	if k1 <= 0 || k1 > 32 || k2 <= 0 || k2 > 32 {
+		panic(ErrKOverflow)
+	}
+
+	if k1 < k2 {
+		return false
+	}
+	return code>>((k1-k2)<<1) == prefix
+}
+
+// MustHasPrefix check if a k-mer has a prefix
+func MustHasPrefix(code uint64, prefix uint64, k1, k2 int) bool {
+	if k1 < k2 {
+		return false
+	}
+	return code>>((k1-k2)<<1) == prefix
 }
